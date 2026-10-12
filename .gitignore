@@ -1,0 +1,17 @@
+
+__pycache__/
+*.pyc
+
+
+backend/venv/
+backend/.venv/
+
+
+frontend/.next/
+frontend/node_modules/
+
+deploy/.env
+deploy/compose.local.yaml
+
+backend/.coverage
+backend/coverage.xml
