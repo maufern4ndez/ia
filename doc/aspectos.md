@@ -1,0 +1,60 @@
+# Aspectos de Calidad
+
+## Aspecto declarado: Mantenibilidad
+
+### Descripción
+
+DRIFT debe contar con una arquitectura que permita modificar, ampliar y mantener el sistema sin afectar de manera significativa las funcionalidades existentes. Este aspecto busca facilitar principalmente:
+
+* Incorporar nuevas plataformas digitales o tiendas de videojuegos.
+* Agregar nuevas fuentes de información sobre precios y disponibilidad.
+* Modificar la lógica de comparación y recomendación.
+* Añadir nuevos filtros o características para personalizar las búsquedas.
+* Realizar cambios en un componente sin generar problemas en otras partes del sistema.
+
+### Por qué se eligió este aspecto
+
+La plataforma dependerá de información proveniente de diferentes tiendas y servicios, los cuales pueden cambiar con el tiempo. Además, DRIFT está planteado para crecer e incorporar nuevas plataformas, funcionalidades y criterios de recomendación. Por esta razón, una arquitectura mantenible permitirá realizar estos cambios de forma organizada, reduciendo el impacto sobre el sistema y facilitando su evolución.
+
+### Cómo se va a evaluar
+
+La mantenibilidad se evaluará mediante la capacidad de incorporar una nueva plataforma o fuente de precios sin realizar modificaciones importantes en los demás componentes del sistema. También se revisará que las funcionalidades estén separadas de manera que los cambios puedan realizarse de forma independiente y que el código sea fácil de comprender y mantener.
+
+### Estado
+
+* Aspecto identificado y declarado
+* Arquitectura y mecanismos para favorecerlo definidos
+* Implementado
+* Pruebas de mantenibilidad realizadas
+
+### Decisión arquitectónica relacionada
+
+La mantenibilidad es el principal atributo de calidad considerado en la selección de la arquitectura de DRIFT. El ADR-0002 establece la **Arquitectura Hexagonal (Ports and Adapters)** como arquitectura base, debido a su bajo acoplamiento, facilidad para incorporar nuevas integraciones y capacidad para facilitar la evolución del sistema.
+
+* [`ADR-0002: Adoptar Next.js y FastAPI sobre arquitectura hexagonal`](adr/0002-adoptar-nextjs-fastapi-arquitectura-hexagonal.md)
+
+## Escenarios de calidad
+
+Los escenarios de calidad de DRIFT se documentan mediante los elementos de fuente, estímulo, artefacto, entorno, respuesta y medida verificable. La siguiente tabla consolida estos elementos junto con el atributo de calidad y el identificador de cada escenario.
+
+| ID | Aspecto de calidad | Fuente | Estímulo | Artefacto | Entorno | Respuesta | Medida verificable |
+|---|---|---|---|---|---|---|---|
+| [E1](escenarios.md#escenario-1) | Eficiencia de desempeño | Usuario de DRIFT. | El usuario realiza una búsqueda de un videojuego para comparar su precio. | Módulo de búsqueda y comparación de precios de DRIFT. | Sistema funcionando normalmente con hasta 50 usuarios concurrentes. | DRIFT consulta y muestra los precios disponibles del videojuego en las diferentes tiendas digitales. | ≤ 3 segundos en el p95. |
+| [E2](escenarios.md#escenario-2) | Mantenibilidad | Equipo de desarrollo de DRIFT. | Se requiere modificar o reemplazar la integración con una fuente externa de precios debido a un cambio en su API. | Adaptador de integración de la fuente externa de precios. | Sistema funcionando normalmente y utilizando la fuente externa modificada. | DRIFT deberá permitir modificar el adaptador correspondiente sin realizar cambios significativos en el núcleo de la aplicación ni en las integraciones con las demás fuentes. | El cambio deberá limitarse al adaptador de la fuente afectada, sin modificar el dominio ni los adaptadores de las demás fuentes. |
+| [E3](escenarios.md#escenario-3) | Usabilidad / eficiencia | Usuario de DRIFT. | El usuario busca un videojuego y desea determinar cuál de las opciones disponibles es más conveniente. | Módulo de comparación y recomendación de DRIFT. | Usuario con acceso a los resultados de las diferentes tiendas digitales. | DRIFT presenta las opciones ordenadas o diferenciadas según precio, disponibilidad de plataforma y demás criterios considerados por el sistema. | Máximo 3 interacciones. |
+| [E4](escenarios.md#escenario-4) | Rendimiento / compatibilidad | Usuario con un dispositivo PC registrado en DRIFT. | El usuario consulta un videojuego para conocer si su equipo puede ejecutarlo. | Módulo de compatibilidad y estimación de rendimiento. | El usuario tiene previamente registrado su dispositivo y sus especificaciones. | DRIFT compara las especificaciones del dispositivo con los requisitos del videojuego e informa el nivel de compatibilidad o rendimiento estimado. | ≤ 5 segundos en el p95. |
+| [E5](escenarios.md#escenario-5) | Disponibilidad | Servicio externo de una tienda digital. | Una de las fuentes externas de precios deja de responder durante una consulta. | Módulo de consulta e integración de fuentes de precios de DRIFT. | DRIFT se encuentra funcionando normalmente y el usuario está realizando una comparación de precios. | DRIFT continúa mostrando la información obtenida de las demás fuentes disponibles e indica que una fuente no pudo ser consultada. | Consulta operativa y demás fuentes disponibles en ≤ 5 segundos. |
+| [E6](escenarios.md#escenario-6) | Disponibilidad y rendimiento | Servicio externo de precios (CheapShark) lento. | Con 50 usuarios concurrentes, CheapShark tarda más de 5 s en el 35 % de las consultas (supuesto declarado). | Módulo de consulta e integración de fuentes de precios de DRIFT. | Operación normal, consultas distintas, sin caché caliente. | DRIFT responde sin esperar a la fuente lenta e indica en `unavailable_sources` qué fuente no respondió. | p95 ≤ 5 s, < 1 % de solicitudes fallidas y 0 respuestas degradadas sin aviso. |
+
+## Tabla de trazabilidad arquitectónica
+
+Esta tabla relaciona los escenarios de calidad con los requisitos, las vistas C4, las decisiones arquitectónicas, los elementos de código, las pruebas y la evidencia disponible. Cuando una implementación o evidencia todavía no existe, se indica explícitamente como pendiente.
+
+| ID | Aspecto | Requisito | C4 | ADR | Código | Pruebas | Evidencia |
+|---|---|---|---|---|---|---|---|
+| E1 | Rendimiento | La búsqueda y comparación de precios debe responder en ≤ 3 segundos en p95 bajo 50 usuarios concurrentes. | [C4 nivel 2](c4/contenedores.md) | [ADR-0002](adr/0002-adoptar-nextjs-fastapi-arquitectura-hexagonal.md) | `backend/app/infrastructure/external/steam/steam_game_repository.py` y `backend/app/application/usecases/search_games.py` | `scripts/k6_baseline.js` | [Evidencia E1](evidencias/e1-linea-base.md): 50 solicitudes exitosas, 0 % fallidas y p95 de 1.24 s. Cumple el objetivo de ≤ 3 segundos. |
+| E2 | Mantenibilidad | Se debe poder cambiar una fuente externa sin modificar el dominio ni los demás adaptadores. | [C4 nivel 2](c4/contenedores.md) | [ADR-0002](adr/0002-adoptar-nextjs-fastapi-arquitectura-hexagonal.md) | `backend/app/infrastructure/external/steam/steam_game_repository.py` | `backend/tests/test_health.py` | Corte vertical implementado; prueba específica de sustitución pendiente. |
+| E3 | Usabilidad | El usuario debe poder identificar la opción más conveniente en un máximo de 3 interacciones. | [C4 nivel 1](c4/contexto.md) / [C4 nivel 2](c4/contenedores.md) | [ADR-0002](adr/0002-adoptar-nextjs-fastapi-arquitectura-hexagonal.md) | `frontend/ui/components/DriftHome.js` | [Procedimiento de prueba E3](evidencias/e3-usabilidad.md) | Prueba manual realizada: tras buscar un videojuego, la tarjeta muestra la plataforma, el precio y la mejor opción disponible sin interacciones adicionales. |
+| E4 | Compatibilidad | La consulta de compatibilidad debe responder en ≤ 5 segundos en p95. | [C4 nivel 2](c4/contenedores.md) | [ADR-0002](adr/0002-adoptar-nextjs-fastapi-arquitectura-hexagonal.md) | `backend/app/application/usecases/estimate_compatibility.py`, `backend/app/infrastructure/persistence/in_memory_game_requirements_repository.py` y `frontend/ui/components/DriftHome.js` | `backend/tests/test_compatibility.py` | [Evidencia E4](evidencias/e4-compatibilidad.md). Cuatro pruebas específicas aprobadas; suite completa del backend: 8 passed. |
+| E5 | Disponibilidad | Ante la falla de una fuente externa, el sistema debe continuar mostrando la información disponible de las demás fuentes y responder en ≤ 5 segundos. | [C4 nivel 2](c4/contenedores.md) | [ADR-0002](adr/0002-adoptar-nextjs-fastapi-arquitectura-hexagonal.md) | `backend/app/infrastructure/persistence/resilient_game_repository.py` y `frontend/ui/components/DriftHome.js` | `backend/tests/test_search_games.py::test_search_uses_fallback_when_steam_is_unavailable` | Prueba automatizada aprobada: 4 passed. Si Steam falla, DRIFT responde con el catálogo local de respaldo e informa que Steam no estuvo disponible. La integración simultánea con tiendas reales queda fuera del alcance actual. |
+| E6 | Disponibilidad y rendimiento | Con una fuente lenta, la búsqueda mantiene p95 ≤ 5 s y avisa qué fuente no respondió. | [C4 nivel 2](c4/contenedores.md), [C4 nivel 3](c4/componentes.md) | [ADR-0009](adr/0009-degradacion-controlada-de-fuentes.md) (propuesto), [ADR-0008](adr/0008-persistencia-y-modelo-de-ejecucion.md) (propuesto) | `backend/app/infrastructure/persistence/combined_game_repository.py`, `backend/app/infrastructure/external/single_flight_cache.py` | `backend/tests/test_source_degradation.py`; experimento `scripts/k6_e6_degradacion.js` | **Pendiente de medición.** Las 6 corridas de k6 deben ejecutarse y registrarse en [e6-degradacion-bajo-carga.md](evidencias/e6-degradacion-bajo-carga.md). Las 6 pruebas nuevas pasaron en un arnés local sin pytest; la suite completa no se ejecutó. |
